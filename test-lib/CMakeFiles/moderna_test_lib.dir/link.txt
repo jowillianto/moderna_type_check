@@ -1,0 +1,2 @@
+/Library/Developer/CommandLineTools/usr/bin/ar qc libmoderna_test_lib.a CMakeFiles/moderna_test_lib.dir/src/assert.ccm.o CMakeFiles/moderna_test_lib.dir/src/exception.ccm.o CMakeFiles/moderna_test_lib.dir/src/randomizer.ccm.o CMakeFiles/moderna_test_lib.dir/src/test_config.ccm.o CMakeFiles/moderna_test_lib.dir/src/test_lib.ccm.o CMakeFiles/moderna_test_lib.dir/src/test_result.ccm.o CMakeFiles/moderna_test_lib.dir/src/test_suite.ccm.o
+/Library/Developer/CommandLineTools/usr/bin/ranlib libmoderna_test_lib.a

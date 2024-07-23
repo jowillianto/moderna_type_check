@@ -1,0 +1,312 @@
+module;
+#include <rfl/json.hpp>
+#include <expected>
+#include <format>
+#include <ranges>
+#include <rfl.hpp>
+#include <string>
+#include <variant>
+#include <vector>
+export module moderna.type_check:types;
+import :constraints;
+import :main_types;
+import :matcher;
+
+namespace moderna::type_check {
+  export struct generic_type {
+    struct basic_type {
+      std::string type;
+      using viewer_t = basic_type_view;
+
+      std::string name() const {
+        return std::format("\"{}\"", type);
+      }
+    };
+    struct list_type {
+      rfl::Literal<"list", "List"> type;
+      rfl::Box<generic_type> child;
+      using viewer_t = list_type_view<const generic_type &>;
+
+      list_type clone() const {
+        return list_type{.type{"list"}, .child{rfl::make_box<generic_type>(deep_copy(*child))}};
+      }
+
+      std::string name() const {
+        return std::format("List[{}]", child->name());
+      }
+
+      template <typename type_t> static list_type make(type_t type) {
+        return list_type{.type{"list"}, .child{rfl::make_box<generic_type>(std::move(type))}};
+      }
+    };
+    struct union_type {
+      rfl::Literal<"union", "Union"> type;
+      std::vector<generic_type> children;
+
+      using viewer_t = union_type_view<const decltype(children) &>;
+      using viewer_children_t = const decltype(children) &;
+
+      template <typename... types> static union_type make(types... type) {
+        auto t = union_type{.type{"union"}, .children{}};
+        (t.children.emplace_back(std::move(type)), ...);
+        return t;
+      }
+
+      std::string name() const {
+        std::string n;
+        auto ctx = std::back_inserter(n);
+        std::format_to(ctx, "Union[");
+        for (const auto &c : children)
+          std::format_to(ctx, "{}, ", c.name());
+        std::format_to(ctx, "]");
+        return n;
+      }
+    };
+    struct optional_type {
+      rfl::Literal<"optional", "Optional"> type;
+      rfl::Box<generic_type> child;
+      using viewer_t = optional_type_view<const generic_type &>;
+
+      optional_type clone() const {
+        return optional_type{
+          .type{"optional"}, .child{rfl::make_box<generic_type>(deep_copy(*child))}
+        };
+      }
+
+      std::string name() const {
+        return std::format("Optional[{}]", child->name());
+      }
+
+      template <typename type_t> static optional_type make(type_t type) {
+        return optional_type{
+          .type{"optional"}, .child{rfl::make_box<generic_type>(std::move(type))}
+        };
+      }
+    };
+
+    struct variadic_type {
+      rfl::Literal<"variadic", "Variadic"> type;
+      rfl::Box<generic_type> child;
+      using viewer_t = variadic_type_view<const generic_type &>;
+
+      variadic_type clone() const {
+        return variadic_type{
+          .type{"variadic"}, .child{rfl::make_box<generic_type>(deep_copy(*child))}
+        };
+      }
+
+      std::string name() const {
+        return std::format("Variadic[{}]", child->name());
+      }
+
+      template <typename type_t> static variadic_type make(type_t type) {
+        return variadic_type{
+          .type{"variadic"}, .child{rfl::make_box<generic_type>(std::move(type))}
+        };
+      }
+    };
+    struct tuple_type {
+      rfl::Literal<"tuple", "Tuple"> type;
+      std::vector<generic_type> children;
+      using viewer_t = tuple_type_view<const decltype(children) &>;
+      using viewer_children_t = const decltype(children) &;
+
+      template <typename... types> static tuple_type make(types... type) {
+        auto t = tuple_type{.type{"tuple"}, .children{}};
+        (t.children.emplace_back(std::move(type)), ...);
+        return t;
+      }
+
+      std::string name() const {
+        std::string n;
+        auto ctx = std::back_inserter(n);
+        std::format_to(ctx, "Tuple[");
+        for (const auto &c : children)
+          std::format_to(ctx, "{}, ", c.name());
+        std::format_to(ctx, "]");
+        return n;
+      }
+    };
+
+    using variant_t =
+      std::variant<list_type, union_type, optional_type, variadic_type, tuple_type, basic_type>;
+    variant_t type;
+
+    using ReflectionType = std::variant<
+      list_type,
+      union_type,
+      optional_type,
+      variadic_type,
+      tuple_type,
+      basic_type,
+      std::string>;
+
+    std::string name() const {
+      return std::visit([](const auto &t) { return t.name(); }, type);
+    }
+
+    template <typename type_t> generic_type(type_t type) : type{std::move(type)} {}
+    generic_type(const ReflectionType &var) :
+      type{std::visit(
+        [](const auto &t) {
+          using obj_t = std::remove_cvref_t<decltype(t)>;
+          if constexpr (std::same_as<obj_t, std::string>) return variant_t{basic_type{t}};
+          else
+            return variant_t{deep_copy(t)};
+        },
+        var
+      )} {}
+    generic_type(const generic_type &other) :
+      type{std::visit([](const auto &e) { return variant_t{deep_copy(e)}; }, other.type)} {}
+
+    generic_type(generic_type &&other) : type{std::move(other.type)} {}
+    generic_type &operator=(const generic_type &other) {
+      type = std::visit([](const auto &e) { return variant_t{deep_copy(e)}; }, other.type);
+      return *this;
+    }
+    generic_type &operator=(generic_type &&other) {
+      type = std::move(other.type);
+      return *this;
+    }
+    ReflectionType reflection() const {
+      return std::visit(
+        [](auto &&entry) { return ReflectionType{std::move(entry)}; }, deep_copy(*this).type
+      );
+    }
+  };
+  /*
+    Specializations of basic type.
+  */
+
+  export template <> struct union_type_view<const std::vector<generic_type> &> {
+    const std::vector<generic_type> &children;
+  };
+  export template <> struct tuple_type_view<const std::vector<generic_type> &> {
+    const std::vector<generic_type> &children;
+  };
+  /*
+    IMPLEMENTATION
+  */
+  using list_type = generic_type::list_type;
+  using optional_type = generic_type::optional_type;
+  using variadic_type = generic_type::variadic_type;
+  using union_type = generic_type::union_type;
+  using tuple_type = generic_type::tuple_type;
+  using basic_type = generic_type::basic_type;
+
+  /*
+    VIEWER TRANSFORMATION
+  */
+  template <> struct owner_viewer<basic_type, basic_type_view> {
+    constexpr static basic_type_view as_view(const basic_type &owner) {
+      return basic_type_view{owner.type};
+    }
+  };
+  template <> struct owner_viewer<list_type, list_type::viewer_t> {
+    constexpr static list_type::viewer_t as_view(const list_type &owner) {
+      return list_type::viewer_t{.child{*owner.child}};
+    }
+  };
+  template <> struct owner_viewer<union_type, union_type::viewer_t> {
+    constexpr static union_type::viewer_t as_view(const union_type &owner) {
+      return union_type::viewer_t{owner.children};
+    }
+  };
+  template <> struct owner_viewer<optional_type, optional_type::viewer_t> {
+    constexpr static optional_type::viewer_t as_view(const optional_type &owner) {
+      return optional_type::viewer_t{.child{*owner.child}};
+    }
+  };
+  template <> struct owner_viewer<tuple_type, tuple_type::viewer_t> {
+    constexpr static tuple_type::viewer_t as_view(const tuple_type &owner) {
+      return tuple_type::viewer_t{owner.children};
+    }
+  };
+  template <> struct owner_viewer<variadic_type, variadic_type::viewer_t> {
+    constexpr static variadic_type::viewer_t as_view(const variadic_type &owner) {
+      return variadic_type::viewer_t{.child{*owner.child}};
+    }
+  };
+  /*
+    Generic Matching
+  */
+  /*
+    Compares a generic with another generic or not another generic.
+  */
+  template <typename source_t, typename target_t>
+    requires(std::same_as<generic_type, source_t> || std::same_as<generic_type, target_t>)
+  struct type_matcher<source_t, target_t> {
+    static constexpr bool match(const source_t &s, const target_t &t);
+  };
+
+  template <> struct type_options<generic_type> {
+    static constexpr bool allow_empty(const generic_type &t) {
+      return std::visit(
+        [](const auto &visited) { return ::moderna::type_check::allow_empty(visited); }, t.type
+      );
+    }
+    static constexpr bool allow_multiple(const generic_type &t) {
+      return std::visit(
+        [](const auto &visited) { return ::moderna::type_check::allow_multiple(visited); }, t.type
+      );
+    }
+  };
+  template <> struct type_matcher<union_type::viewer_t, union_type::viewer_t> {
+    static constexpr bool match(const union_type::viewer_t &s, const union_type::viewer_t &t);
+  };
+  template <typename source_t> struct type_matcher<source_t, union_type::viewer_t> {
+    static constexpr bool match(const source_t &s, const union_type::viewer_t &t);
+  };
+  template <> struct type_matcher<tuple_type::viewer_t, tuple_type::viewer_t> {
+    static constexpr bool match(const tuple_type::viewer_t &s, const tuple_type::viewer_t &t);
+  };
+
+  template <typename source_t, typename target_t>
+    requires(std::same_as<generic_type, source_t> || std::same_as<generic_type, target_t>)
+  constexpr bool type_matcher<source_t, target_t>::match(const source_t &s, const target_t &t) {
+    if constexpr (std::same_as<generic_type, source_t> && std::same_as<generic_type, target_t>) {
+      return std::visit(
+        [&](const auto &s_type) {
+          return std::visit(
+            [&](const auto &t_type) { return is_connectable(s_type, t_type); }, t.type
+          );
+        },
+        s.type
+      );
+    } else if constexpr (std::same_as<generic_type, source_t>) {
+      return std::visit([&](const auto &s_type) { return is_connectable(s_type, t); }, s.type);
+    } else {
+      return std::visit([&](const auto &t_type) { return is_connectable(s, t_type); }, t.type);
+    }
+  }
+
+  constexpr bool type_matcher<union_type::viewer_t, union_type::viewer_t>::match(
+    const union_type::viewer_t &s, const union_type::viewer_t &t
+  ) {
+    return std::ranges::find_if_not(s.children, [&](const auto &s_type) {
+             return is_connectable(s_type, t);
+           }) == s.children.end();
+  }
+  template <typename source_t>
+  constexpr bool type_matcher<source_t, union_type::viewer_t>::match(
+    const source_t &s, const union_type::viewer_t &t
+  ) {
+    return std::ranges::find_if(t.children, [&](const auto &t_type) {
+             return is_connectable(s, t_type);
+           }) != t.children.end();
+  }
+  constexpr bool type_matcher<tuple_type::viewer_t, tuple_type::viewer_t>::match(
+    const tuple_type::viewer_t &s, const tuple_type::viewer_t &t
+  ) {
+    if (t.children.size() != s.children.size()) {
+      return false;
+    }
+    auto s_t_pair = std::ranges::zip_view(s.children, t.children);
+    return std::ranges::find_if_not(s_t_pair, [](const auto &p) {
+             const auto &[s_type, t_type] = p;
+             return is_connectable(s_type, t_type);
+           }) == s_t_pair.end();
+  }
+}
+
+using tcg = moderna::type_check::generic_type;

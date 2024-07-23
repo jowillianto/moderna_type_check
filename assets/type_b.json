@@ -1,0 +1,11 @@
+{
+  "a" : "string",
+  "b" : {
+    "type" : "list", 
+    "child" : "string"
+  }, 
+  "c" : {
+    "type" : "optional",
+    "child" : "string"
+  }
+}

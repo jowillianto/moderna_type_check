@@ -1,0 +1,18 @@
+{
+  "a_p" : "string",
+  "b_p" : {
+    "type" : "union",
+    "children" : ["string", {"type" : "list", "child" : "string"}]
+  },
+  "b_c" : {
+    "type" : "optional",
+    "child" : "string"
+  },
+  "d" : {
+    "type" : "variadic",
+    "child" : {
+      "type" : "union",
+      "children" : ["string", {"type" : "list", "child" : "string"}, {"type" : "optional", "child" : "string"}]
+    }
+  }
+}
