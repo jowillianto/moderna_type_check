@@ -9,6 +9,7 @@ namespace tc = moderna::type_check;
 using tcg = tc::generic_type;
 
 PYBIND11_MODULE(moderna_type_check, m) {
+  py::class_<tcg>(m, "GenericType").def("name", &tcg::name);
   py::class_<tc::nameless_record<tcg>>(m, "NamelessRecord")
     .def_static(
       "from_json",
@@ -62,7 +63,14 @@ PYBIND11_MODULE(moderna_type_check, m) {
         return tc::record_matches<tcg>::create(s, t);
       }
     )
-    .def("get", &tc::record_matches<tcg>::get)
+    .def(
+      "get_match",
+      [](const tc::record_matches<tcg> &t, const std::string &name) {
+        auto rec = t.get_match(name);
+        return *t.get_match(name).value();
+      },
+      py::return_value_policy::reference
+    )
     .def("is_complete", &tc::record_matches<tcg>::is_complete)
     .def("is_empty", &tc::record_matches<tcg>::is_empty)
     .def("is_partial", &tc::record_matches<tcg>::is_partial)

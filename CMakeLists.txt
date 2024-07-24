@@ -3,7 +3,6 @@ project (moderna_type_check)
 set (CMAKE_CXX_STANDARD 23)
 set (CMAKE_CXX_STANDARD_REQUIRED true)
 set (CMAKE_CXX_SCAN_FOR_MODULES true)
-
 if (NOT TARGET ${PROJECT_NAME})
   file(GLOB ${PROJECT_NAME}_src ${CMAKE_CURRENT_LIST_DIR}/src/*.ccm)
   add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/libs/variant_error)
@@ -15,10 +14,9 @@ if (NOT TARGET ${PROJECT_NAME})
   )
   target_link_libraries(${PROJECT_NAME} PUBLIC moderna_variant_error reflectcpp)
 endif()
-
 # Python Build
-find_package(Python3 3.7 REQUIRED COMPONENTS Interpreter Development)
-if (EXISTS ${CMAKE_CURRENT_LIST_DIR}/libs/pybind11/CMakeLists.txt)
+if (EXISTS ${CMAKE_CURRENT_LIST_DIR}/libs/pybind11/CMakeLists.txt AND NOT BUILD_EMSCRIPTEN)
+  find_package(Python3 3.7 REQUIRED COMPONENTS Interpreter Development)
   add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/libs/pybind11 EXCLUDE_FROM_ALL)
   add_library(${PROJECT_NAME}_python SHARED EXCLUDE_FROM_ALL)
   target_sources(${PROJECT_NAME}_python
@@ -43,14 +41,10 @@ if (EXISTS ${CMAKE_CURRENT_LIST_DIR}/libs/pybind11/CMakeLists.txt)
   target_compile_options(${PROJECT_NAME}_python PRIVATE "-fPIC")
 endif()
 
-# JS Build
-if (EXISTS ${CMAKE_CURRENT_LIST_DIR}/libs/emsdk/README.md)
-
-endif()
-
 if (
   EXISTS ${CMAKE_CURRENT_LIST_DIR}/../test-lib
   AND PROJECT_IS_TOP_LEVEL
+  AND NOT BUILD_EMSCRIPTEN
 )
   include(CTest)
   add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/../test-lib test-lib)
@@ -66,4 +60,20 @@ if (
   )
 else()
   message (${PROJECT_NAME} : "Clone Moderna Library to Test")
+endif()
+
+if(BUILD_EMSCRIPTEN)
+  add_executable(${PROJECT_NAME}_js)
+  target_sources(${PROJECT_NAME}_js PUBLIC
+    ${CMAKE_CURRENT_LIST_DIR}/wrappers/wasm.cpp
+  )
+  add_compile_definitions("__wasi__")
+  target_compile_options(reflectcpp PUBLIC "-Wno-missing-template-arg-list-after-template-kw")
+  target_compile_options(${PROJECT_NAME}_js PUBLIC -I${CMAKE_CURRENT_LIST_DIR}/libs/emsdk/upstream/emscripten/cache/sysroot/include)
+  target_link_options(${PROJECT_NAME}_js PUBLIC "-lembind" --emit-tsd ${PROJECT_NAME}_js.ts.d)
+  target_link_libraries(${PROJECT_NAME}_js
+    PUBLIC
+      reflectcpp
+      ${PROJECT_NAME}
+  )
 endif()

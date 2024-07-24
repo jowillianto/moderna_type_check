@@ -308,5 +308,3 @@ namespace moderna::type_check {
            }) == s_t_pair.end();
   }
 }
-
-using tcg = moderna::type_check::generic_type;

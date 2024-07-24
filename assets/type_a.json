@@ -1,18 +1,22 @@
 {
-  "a_p" : "string",
-  "b_p" : {
-    "type" : "union",
-    "children" : ["string", {"type" : "list", "child" : "string"}]
+  "a" : {
+    "a" : "p",
+    "b" : "f"
   },
-  "b_c" : {
-    "type" : "optional",
-    "child" : "string"
+  "b" : {
+    "a" : "c",
+    "b" : {
+      "type" : "list",
+      "child" : {
+        "type" : "tuple",
+        "children" : ["a", "b", "c", "d"]
+      }
+    }, 
+    "c" : "a_b",
+    "d" : "a_c",
+    "e" : "a_d"
   },
-  "d" : {
-    "type" : "variadic",
-    "child" : {
-      "type" : "union",
-      "children" : ["string", {"type" : "list", "child" : "string"}, {"type" : "optional", "child" : "string"}]
-    }
+  "c" : {
+    "l" : "l"
   }
 }

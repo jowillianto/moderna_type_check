@@ -1,11 +1,11 @@
 module;
 #include <rfl/json.hpp>
+#include <ranges>
 #include <algorithm>
 #include <expected>
 #include <format>
 #include <map>
 #include <print>
-#include <ranges>
 #include <rfl.hpp>
 #include <stdexcept>
 #include <string>
@@ -36,12 +36,12 @@ namespace moderna::type_check {
     Definition
   */
   export template <checkable_generic type_t> struct source_match {
-    const type_t &type;
+    type_t type;
     std::string_view name;
     size_t id;
   };
   export template <checkable_generic type_t> struct record_match {
-    const type_t &type;
+    type_t type;
     std::string_view target;
     std::vector<source_match<type_t>> sources;
 
@@ -53,24 +53,12 @@ namespace moderna::type_check {
     multi_nameless_record<type_t> sources;
     nameless_record<type_t> target;
 
-    const record_match<type_t> &get(std::string_view target_name) {
-      auto it = std::ranges::find_if(matches, [&](const auto &match) {
-        return match.target == target_name;
-      });
-      if (it == matches.end())
-        throw std::out_of_range(std::format("{} does not exist", target_name));
-      return *it;
-    }
-    std::expected<const record_match<type_t> &, mve<std::out_of_range>> try_get(
-      std::string_view target_name
-    ) noexcept {
-      using error_t = mve<std::out_of_range>;
-      auto it = std::ranges::find_if(matches, [&](const auto &match) {
-        return match.target == target_name;
-      });
-      if (it == matches.end()) return std::unexpected{error_t{std::out_of_range{"does not exist"}}};
-      return *it;
-    }
+    /*
+      operation. this returns a record_match pointer to the internal data structure
+    */
+    std::expected<const record_match<type_t> *, mve<std::out_of_range>> get_match(std::string_view v
+    ) const;
+
     bool is_complete() const;
     bool is_partial() const;
     bool is_empty() const;
@@ -166,6 +154,15 @@ namespace moderna::type_check {
       partial is not complete and not empty.
     */
     return !is_complete() && !is_partial();
+  }
+  template <checkable_generic type_t>
+  std::expected<const record_match<type_t> *, mve<std::out_of_range>>
+  record_matches<type_t>::get_match(std::string_view v) const {
+    auto it = std::ranges::find_if(matches, [&](const auto &p) { return p.target == v; });
+    if (it == matches.end())
+      return std::unexpected{mve<std::out_of_range>{std::out_of_range{std::format("{} not found", v)
+      }}};
+    return &(*it);
   }
 
   template <checkable_generic type_t>

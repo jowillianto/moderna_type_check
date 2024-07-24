@@ -1,11 +1,39 @@
 {
-  "a" : "string",
-  "b" : {
-    "type" : "list", 
-    "child" : "string"
+  "a" : {
+    "b" : {
+      "type" : "optional",
+      "child" : "p"
+    },
+    "c" : "f"
   }, 
   "c" : {
-    "type" : "optional",
-    "child" : "string"
+    "b" : {
+      "type" : "optional",
+      "child" : "p"
+    },
+    "c" : "f",
+    "d" : "l"
+  },
+  "b" : {
+    "e" : "c",
+    "f" : {
+      "type" : "list",
+      "child" : {
+        "type" : "tuple",
+        "children" : ["a", "b", "c", "d"]
+      }
+    },
+    "g" : {
+      "type" : "Optional",
+      "child" : "a_b"
+    },
+    "h" : {
+      "type" : "Optional",
+      "child" : "a_c"
+    },
+    "i" : {
+      "type" : "optional",
+      "child" : "a_d"
+    }
   }
 }

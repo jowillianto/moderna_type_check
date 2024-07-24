@@ -1,19 +1,6 @@
 module;
 #include <concepts>
-#include <rfl.hpp>
-#include <rfl/json.hpp>
 export module moderna.type_check:constraints;
-
-struct basic_type;
-struct list_type;
-struct union_type;
-struct optional_type;
-using generic_type = std::variant<list_type, union_type, optional_type, basic_type>;
-
-struct basic_type {
-  std::string type;
-};
-
 namespace moderna::type_check {
   template <typename owner_t, typename viewer_t> struct owner_viewer;
 
