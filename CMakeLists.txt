@@ -3,16 +3,16 @@ project (moderna_type_check)
 set (CMAKE_CXX_STANDARD 23)
 set (CMAKE_CXX_STANDARD_REQUIRED true)
 set (CMAKE_CXX_SCAN_FOR_MODULES true)
+
 if (NOT TARGET ${PROJECT_NAME})
   file(GLOB ${PROJECT_NAME}_src ${CMAKE_CURRENT_LIST_DIR}/src/*.ccm)
-  add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/libs/variant_error)
   add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/libs/reflect-cpp)
   add_library(${PROJECT_NAME})
   target_sources(${PROJECT_NAME}
     PUBLIC
       FILE_SET CXX_MODULES FILES ${${PROJECT_NAME}_src}
   )
-  target_link_libraries(${PROJECT_NAME} PUBLIC moderna_variant_error reflectcpp)
+  target_link_libraries(${PROJECT_NAME} PUBLIC reflectcpp)
 endif()
 # Python Build
 if (EXISTS ${CMAKE_CURRENT_LIST_DIR}/libs/pybind11/CMakeLists.txt AND NOT BUILD_EMSCRIPTEN)
@@ -70,7 +70,7 @@ if(BUILD_EMSCRIPTEN)
   add_compile_definitions("__wasi__")
   target_compile_options(reflectcpp PUBLIC "-Wno-missing-template-arg-list-after-template-kw")
   target_compile_options(${PROJECT_NAME}_js PUBLIC -I${CMAKE_CURRENT_LIST_DIR}/libs/emsdk/upstream/emscripten/cache/sysroot/include)
-  target_link_options(${PROJECT_NAME}_js PUBLIC "-lembind" --emit-tsd ${PROJECT_NAME}_js.ts.d)
+  target_link_options(${PROJECT_NAME}_js PUBLIC "-lembind" --emit-tsd ${PROJECT_NAME}_js.d.ts)
   target_link_libraries(${PROJECT_NAME}_js
     PUBLIC
       reflectcpp
