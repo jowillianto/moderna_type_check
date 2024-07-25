@@ -1,21 +1,18 @@
 module;
 #include <rfl/json.hpp>
-#include <ranges>
 #include <algorithm>
 #include <expected>
 #include <format>
 #include <map>
 #include <print>
+#include <ranges>
 #include <rfl.hpp>
 #include <stdexcept>
 #include <string>
 #include <string_view>
 #include <vector>
 export module moderna.type_check:engine;
-import moderna.variant_error;
 import :matcher;
-
-template <typename... errors> using mve = moderna::variant_error<errors...>;
 
 namespace moderna::type_check {
   template <typename type_t>
@@ -50,17 +47,25 @@ namespace moderna::type_check {
   };
   export template <checkable_generic type_t> struct record_matches {
     std::vector<record_match<type_t>> matches;
-    multi_nameless_record<type_t> sources;
-    nameless_record<type_t> target;
 
     /*
       operation. this returns a record_match pointer to the internal data structure
     */
-    std::expected<const record_match<type_t> *, mve<std::out_of_range>> get_match(std::string_view v
+    std::expected<const record_match<type_t> *, std::out_of_range> get_match(std::string_view v
     ) const;
 
+    /*
+      Checks if the current node is fully connected. This will return false even for empty nodes
+      as it does not make any sense.
+    */
     bool is_complete() const;
+    /*
+      Checks if the current node is partially connected, this will return false for emtpy node
+    */
     bool is_partial() const;
+    /*
+      Checks if the current node is empty, this will return true for empty node.
+    */
     bool is_empty() const;
 
     static record_matches create(
@@ -73,20 +78,64 @@ namespace moderna::type_check {
   export template <checkable_generic type_t> struct nameless_record {
     std::map<std::string, type_t> records;
 
+    /*
+      Adds a record into the nameless record.
+    */
+    nameless_record &add_record(const std::string &record_name, const type_t &type);
+    /*
+      Adds two records together.
+    */
     multi_nameless_record<type_t> operator+(const nameless_record<type_t> &record) const;
+    /*
+      Create multiple records from this one record.
+    */
     multi_nameless_record<type_t> to_multiple() const;
+    /*
+      Get key type name pairs.
+      Example : 
+      a : List[Optional[Ya]]
+    */
+    std::map<std::string, std::string> get_name_pairs() const{
+      std::map<std::string, std::string> v;
+      for (const auto& [fdName, fdType] : records){
+        v.emplace(fdName, fdType.name());
+      }
+      return v;
+    }
+    /*
+      Returns the size of the record
+    */
+    size_t size() const {
+      return records.size();
+    }
+    /*
+      Returns if the record is empty
+    */
+    bool is_empty() const {
+      return records.size() == 0;
+    }
 
-    static std::expected<nameless_record, mve<rfl::Error>> from_json(const std::string &v) {
+    /*
+      Creates a record from json.
+    */
+    static std::expected<nameless_record, rfl::Error> from_json(const std::string &v) {
       auto map = rfl::json::read<decltype(records)>(v);
       if (map) return nameless_record{.records{std::move(map.value())}};
       else
-        return std::unexpected{mve<rfl::Error>{map.error().value()}};
+        return std::unexpected{map.error().value()};
+    }
+    static nameless_record make_empty() {
+      return nameless_record{};
     }
   };
   export template <checkable_generic type_t> struct multi_nameless_record {
     std::vector<nameless_record<type_t>> records;
 
     multi_nameless_record operator+(const nameless_record<type_t> &record) const;
+
+    static multi_nameless_record make_empty() {
+      return multi_nameless_record{};
+    }
   };
 
   /*
@@ -102,13 +151,13 @@ namespace moderna::type_check {
   record_matches<type_t> record_matches<type_t>::create(
     const multi_nameless_record<type_t> &sources, const nameless_record<type_t> &target
   ) {
-    auto matches = record_matches<type_t>{.matches{}, .sources{sources}, .target{target}};
-    for (const auto &[target_name, target_type] : matches.target.records) {
+    auto matches = record_matches<type_t>{};
+    for (const auto &[target_name, target_type] : target.records) {
       record_match<type_t> match{.type{target_type}, .target{target_name}, .sources{}};
       bool is_added = false;
       bool multiple = allow_multiple(target_type);
-      for (size_t id = 0; id < matches.sources.records.size(); id++) {
-        const auto &source = matches.sources.records[id];
+      for (size_t id = 0; id < sources.records.size(); id++) {
+        const auto &source = sources.records[id];
         for (const auto &[source_name, source_type] : source.records) {
           if (is_connectable(source_type, target_type) && (!is_added || multiple)) {
             match.sources.emplace_back(source_match<type_t>{
@@ -136,33 +185,42 @@ namespace moderna::type_check {
     /*
       Find anything that is not empty allowable and is empty
     */
+    if (matches.size() == 0) return false;
     return std::ranges::find_if(matches, [&](const record_match<type_t> &match) {
-             const type_t &target_type = target.records.find(match.target.data())->second;
-             return !allow_empty(target_type) && match.is_empty();
+             return !allow_empty(match.type) && match.is_empty();
            }) == matches.end();
   }
   template <checkable_generic type_t> bool record_matches<type_t>::is_empty() const {
     /*
       Find anything that is not empty.
     */
-    return std::ranges::find_if_not(matches, [&](const record_match<type_t> &match) {
-             return match.is_empty();
+    if (matches.size() == 0) return true;
+    return std::ranges::find_if(matches, [&](const record_match<type_t> &match) {
+             return !match.is_empty();
            }) == matches.end();
   }
   template <checkable_generic type_t> bool record_matches<type_t>::is_partial() const {
     /*
       partial is not complete and not empty.
     */
-    return !is_complete() && !is_partial();
+    return !is_complete() && !is_empty();
   }
   template <checkable_generic type_t>
-  std::expected<const record_match<type_t> *, mve<std::out_of_range>>
-  record_matches<type_t>::get_match(std::string_view v) const {
+  std::expected<const record_match<type_t> *, std::out_of_range> record_matches<type_t>::get_match(
+    std::string_view v
+  ) const {
     auto it = std::ranges::find_if(matches, [&](const auto &p) { return p.target == v; });
     if (it == matches.end())
-      return std::unexpected{mve<std::out_of_range>{std::out_of_range{std::format("{} not found", v)
-      }}};
+      return std::unexpected{std::out_of_range{std::format("{} not found", v)}};
     return &(*it);
+  }
+
+  template <checkable_generic type_t>
+  nameless_record<type_t> &nameless_record<type_t>::add_record(
+    const std::string &record_name, const type_t &type
+  ) {
+    records.emplace(record_name, type);
+    return *this;
   }
 
   template <checkable_generic type_t>
