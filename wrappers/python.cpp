@@ -2,6 +2,7 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 #include <format>
+#include <ranges>
 import moderna.type_check;
 
 namespace py = pybind11;
@@ -9,13 +10,23 @@ namespace tc = moderna::type_check;
 using tcg = tc::generic_type;
 
 PYBIND11_MODULE(moderna_type_check, m) {
-  py::class_<tcg>(m, "GenericType").def("name", &tcg::name);
+  py::class_<tcg>(m, "GenericType")
+    .def("name", &tcg::name)
+    .def_static("from_json", [](const std::string& s){
+      return tcg::from_json(s).value();
+    });
   py::class_<tc::nameless_record<tcg>>(m, "NamelessRecord")
     .def_static(
       "from_json",
       [](const std::string &s) { return tc::nameless_record<tcg>::from_json(s).value(); }
     )
+    .def_static("make_empty", tc::nameless_record<tcg>::make_empty)
+    .def("add_record", &tc::nameless_record<tcg>::add_record)
     .def("to_multiple", &tc::nameless_record<tcg>::to_multiple)
+    .def("get_name_pairs", &tc::nameless_record<tcg>::get_name_pairs)
+    .def("size", &tc::nameless_record<tcg>::size)
+    .def("__len__", &tc::nameless_record<tcg>::size)
+    .def("is_empty", &tc::nameless_record<tcg>::is_empty)
     .def(
       "__add__",
       [](const tc::nameless_record<tcg> &x, const tc::nameless_record<tcg> &y) { return x + y; },
@@ -24,6 +35,7 @@ PYBIND11_MODULE(moderna_type_check, m) {
     .def("__str__", [](const tc::nameless_record<tcg> &t) { return std::format("{}", t); })
     .def("__repr__", [](const tc::nameless_record<tcg> &t) { return std::format("{}", t); });
   py::class_<tc::multi_nameless_record<tcg>>(m, "MultiNamelessRecord")
+    .def_static("make_empty", tc::multi_nameless_record<tcg>::make_empty)
     .def(
       "__add__",
       [](const tc::multi_nameless_record<tcg> &x, const tc::nameless_record<tcg> &y) {
@@ -77,16 +89,6 @@ PYBIND11_MODULE(moderna_type_check, m) {
     .def_property_readonly(
       "matches",
       [](const tc::record_matches<tcg> &t) { return t.matches; },
-      py::return_value_policy::reference
-    )
-    .def_property_readonly(
-      "sources",
-      [](const tc::record_matches<tcg> &t) { return t.sources; },
-      py::return_value_policy::reference
-    )
-    .def_property_readonly(
-      "target",
-      [](const tc::record_matches<tcg> &t) { return t.target; },
       py::return_value_policy::reference
     )
     .def("__str__", [](const tc::record_matches<tcg> &t) { return std::format("{}", t); })
