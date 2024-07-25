@@ -20,7 +20,7 @@
       "type" : "list",
       "child" : {
         "type" : "tuple",
-        "children" : ["a", "b", "c", "d"]
+        "child" : ["a", "b", "c", "d"]
       }
     },
     "g" : {
