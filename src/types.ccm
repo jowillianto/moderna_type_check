@@ -41,14 +41,14 @@ namespace moderna::type_check {
     };
     struct union_type {
       rfl::Literal<"union", "Union"> type;
-      std::vector<generic_type> children;
+      std::vector<generic_type> child;
 
-      using viewer_t = union_type_view<const decltype(children) &>;
-      using viewer_children_t = const decltype(children) &;
+      using viewer_t = union_type_view<const decltype(child) &>;
+      using viewer_children_t = const decltype(child) &;
 
       template <typename... types> static union_type make(types... type) {
-        auto t = union_type{.type{"union"}, .children{}};
-        (t.children.emplace_back(std::move(type)), ...);
+        auto t = union_type{.type{"union"}, .child{}};
+        (t.child.emplace_back(std::move(type)), ...);
         return t;
       }
 
@@ -56,7 +56,7 @@ namespace moderna::type_check {
         std::string n;
         auto ctx = std::back_inserter(n);
         std::format_to(ctx, "Union[");
-        for (const auto &c : children)
+        for (const auto &c : child)
           std::format_to(ctx, "{}, ", c.name());
         std::format_to(ctx, "]");
         return n;
@@ -107,13 +107,13 @@ namespace moderna::type_check {
     };
     struct tuple_type {
       rfl::Literal<"tuple", "Tuple"> type;
-      std::vector<generic_type> children;
-      using viewer_t = tuple_type_view<const decltype(children) &>;
-      using viewer_children_t = const decltype(children) &;
+      std::vector<generic_type> child;
+      using viewer_t = tuple_type_view<const decltype(child) &>;
+      using viewer_children_t = const decltype(child) &;
 
       template <typename... types> static tuple_type make(types... type) {
-        auto t = tuple_type{.type{"tuple"}, .children{}};
-        (t.children.emplace_back(std::move(type)), ...);
+        auto t = tuple_type{.type{"tuple"}, .child{}};
+        (t.child.emplace_back(std::move(type)), ...);
         return t;
       }
 
@@ -121,7 +121,7 @@ namespace moderna::type_check {
         std::string n;
         auto ctx = std::back_inserter(n);
         std::format_to(ctx, "Tuple[");
-        for (const auto &c : children)
+        for (const auto &c : child)
           std::format_to(ctx, "{}, ", c.name());
         std::format_to(ctx, "]");
         return n;
@@ -133,11 +133,7 @@ namespace moderna::type_check {
     variant_t type;
 
     using ReflectionType = std::variant<
-      list_type,
-      union_type,
-      optional_type,
-      variadic_type,
-      tuple_type,
+      rfl::TaggedUnion<"type", list_type, union_type, optional_type, variadic_type, tuple_type>,
       basic_type,
       std::string>;
 
@@ -151,8 +147,12 @@ namespace moderna::type_check {
         [](const auto &t) {
           using obj_t = std::remove_cvref_t<decltype(t)>;
           if constexpr (std::same_as<obj_t, std::string>) return variant_t{basic_type{t}};
-          else
+          else if constexpr (std::same_as<obj_t, basic_type>)
             return variant_t{deep_copy(t)};
+          else
+            return rfl::visit([](const auto& t){
+              return variant_t{deep_copy(t)};
+            }, t.variant());
         },
         var
       )} {}
@@ -172,6 +172,13 @@ namespace moderna::type_check {
       return std::visit(
         [](auto &&entry) { return ReflectionType{std::move(entry)}; }, deep_copy(*this).type
       );
+    }
+
+    static std::expected<generic_type, rfl::Error> from_json(const std::string &v) {
+      auto res = rfl::json::read<generic_type>(v);
+      if (res) return std::move(res.value());
+      else
+        return std::unexpected{res.error().value()};
     }
   };
   /*
@@ -209,7 +216,7 @@ namespace moderna::type_check {
   };
   template <> struct owner_viewer<union_type, union_type::viewer_t> {
     constexpr static union_type::viewer_t as_view(const union_type &owner) {
-      return union_type::viewer_t{owner.children};
+      return union_type::viewer_t{owner.child};
     }
   };
   template <> struct owner_viewer<optional_type, optional_type::viewer_t> {
@@ -219,7 +226,7 @@ namespace moderna::type_check {
   };
   template <> struct owner_viewer<tuple_type, tuple_type::viewer_t> {
     constexpr static tuple_type::viewer_t as_view(const tuple_type &owner) {
-      return tuple_type::viewer_t{owner.children};
+      return tuple_type::viewer_t{owner.child};
     }
   };
   template <> struct owner_viewer<variadic_type, variadic_type::viewer_t> {
