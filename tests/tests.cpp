@@ -84,52 +84,65 @@ auto engine_tests =
         tl::assert_equal(matches_b.is_complete(), true);
       }
     )
-    .add_test("match_with_empty", [](){
-      auto rec_a = tc::nameless_record<tcg>::make_empty();
-      auto rec_b = tc::nameless_record<tcg>::make_empty();
-      rec_b.add_record("b", tcg::from_json(R"({"type" : "a"})").value());
-      auto matches = tc::record_matches<tcg>::create(rec_a, rec_b);
-      tl::assert_equal(matches.is_empty(), true);
-      tl::assert_equal(matches.is_partial(), false);
-      tl::assert_equal(matches.is_complete(), false);
-    })
-    .add_test("empty-empty", [](){
-      auto rec_a = tc::nameless_record<tcg>::make_empty();
-      auto rec_b = tc::nameless_record<tcg>::make_empty();
-      auto matches = tc::record_matches<tcg>::create(rec_a, rec_b);
-      tl::assert_equal(matches.is_empty(), true);
-      tl::assert_equal(matches.is_partial(), false);
-      tl::assert_equal(matches.is_complete(), false);
-    })
-    .add_test("match_with_multiple", []() {
-      auto file_a = io::readable_file::open(TYPE_A_FILE).value();
-      auto file_b = io::readable_file::open(TYPE_B_FILE).value();
-      auto file_c_a =
-        rfl::json::read<std::map<std::string, std::map<std::string, tcg>>>(file_a.read().value())
-          .value();
-      auto file_c_b =
-        rfl::json::read<std::map<std::string, std::map<std::string, tcg>>>(file_b.read().value())
-          .value();
-      auto rec_a_a = tc::nameless_record{file_c_a["a"]};
-      auto rec_a_b = tc::nameless_record{file_c_a["c"]};
-      auto rec_b_c = tc::nameless_record{file_c_b["c"]};
-      auto matches = tc::record_matches<tcg>::create((rec_a_a + rec_a_b), rec_b_c);
-      tl::assert_equal(matches.is_complete(), true);
-      tl::assert_equal(matches.is_partial(), false);
-      tl::assert_equal(matches.is_empty(), false);
-    })
-    .add_test("match_partial", [](){
-      auto rec_a = tc::nameless_record<tcg>::make_empty();
-      auto rec_b = tc::nameless_record<tcg>::make_empty();
-      rec_a.add_record("a", tcg::from_json(R"({"type" : "a"})").value());
-      rec_b.add_record("b", tcg::from_json(R"({"type" : "a"})").value());
-      rec_b.add_record("c", tcg::from_json(R"({"type" : "c"})").value());
-      auto matches = tc::record_matches<tcg>::create(rec_a, rec_b);
-      tl::assert_equal(matches.is_empty(), false);
-      tl::assert_equal(matches.is_partial(), true);
-      tl::assert_equal(matches.is_complete(), false);
-    })
-    .add_test("match_empty", [](){
+    .add_test(
+      "match_with_empty",
+      []() {
+        auto rec_a = tc::nameless_record<tcg>::make_empty();
+        auto rec_b = tc::nameless_record<tcg>::make_empty();
+        rec_b.add_record("b", tcg::from_json(R"({"type" : "a"})").value());
+        auto matches = tc::record_matches<tcg>::create(rec_a, rec_b);
+        tl::assert_equal(matches.is_empty(), true);
+        tl::assert_equal(matches.is_partial(), false);
+        tl::assert_equal(matches.is_complete(), false);
+      }
+    )
+    .add_test(
+      "empty-empty",
+      []() {
+        auto rec_a = tc::nameless_record<tcg>::make_empty();
+        auto rec_b = tc::nameless_record<tcg>::make_empty();
+        auto matches = tc::record_matches<tcg>::create(rec_a, rec_b);
+        tl::assert_equal(matches.is_empty(), true);
+        tl::assert_equal(matches.is_partial(), false);
+        tl::assert_equal(matches.is_complete(), false);
+      }
+    )
+    .add_test(
+      "match_with_multiple",
+      []() {
+        auto file_a = io::readable_file::open(TYPE_A_FILE).value();
+        auto file_b = io::readable_file::open(TYPE_B_FILE).value();
+        auto file_c_a =
+          rfl::json::read<std::map<std::string, std::map<std::string, tcg>>>(file_a.read().value())
+            .value();
+        auto file_c_b =
+          rfl::json::read<std::map<std::string, std::map<std::string, tcg>>>(file_b.read().value())
+            .value();
+        auto rec_a_a = tc::nameless_record{file_c_a["a"]};
+        auto rec_a_b = tc::nameless_record{file_c_a["c"]};
+        auto rec_b_c = tc::nameless_record{file_c_b["c"]};
+        auto matches = tc::record_matches<tcg>::create((rec_a_a + rec_a_b), rec_b_c);
+        tl::assert_equal(matches.is_complete(), true);
+        tl::assert_equal(matches.is_partial(), false);
+        tl::assert_equal(matches.is_empty(), false);
+      }
+    )
+    .add_test(
+      "match_partial",
+      []() {
+        auto rec_a = tc::nameless_record<tcg>::make_empty();
+        auto rec_b = tc::nameless_record<tcg>::make_empty();
+        rec_a.add_record("a", tcg::from_json(R"({"type" : "a"})").value());
+        rec_b
+          .add_record("b", tcg::from_json(R"({"type" : "a"})").value())
+          .add_record("c", tcg::from_json(R"({"type" : "c"})").value());
+        auto matches = tc::record_matches<tcg>::create(rec_a, rec_b);
+        tl::assert_equal(matches.is_empty(), false);
+        tl::assert_equal(matches.is_partial(), true);
+        tl::assert_equal(matches.is_complete(), false);
+      }
+    )
+    .add_test("match_empty", []() {
       auto rec_a = tc::nameless_record<tcg>::make_empty();
       auto rec_b = tc::nameless_record<tcg>::make_empty();
       rec_a.add_record("a", tcg::from_json(R"({"type" : "a"})").value());

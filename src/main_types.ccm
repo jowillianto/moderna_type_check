@@ -27,6 +27,7 @@ namespace moderna::type_check {
   export template <typename type_t> struct variadic_type_view {
     type_t child;
   };
+  export struct any_type_view {};
 
   /*
     Type Matching Implementation
@@ -137,6 +138,15 @@ namespace moderna::type_check {
   template <typename source_t, typename target_t>
   struct type_matcher<source_t, variadic_type_view<target_t>> {
     static constexpr bool match(const source_t &s, const variadic_type_view<target_t> &t);
+  };
+  /*
+    any type
+  */
+  template <typename source_t> struct type_matcher<source_t, any_type_view> {
+    static constexpr bool match(const source_t &s, const any_type_view &t);
+  };
+  template <typename target_t> struct type_matcher<any_type_view, target_t> {
+    static constexpr bool match(const any_type_view &s, const target_t &t);
   };
 
   /*
@@ -267,6 +277,19 @@ namespace moderna::type_check {
   ) {
     return is_connectable(s, t.child);
   }
+  template <typename source_t>
+  constexpr bool type_matcher<source_t, any_type_view>::match(
+    const source_t &s, const any_type_view &t
+  ) {
+    return true;
+  }
+  template <typename target_t>
+  constexpr bool type_matcher<any_type_view, target_t>::match(
+    const any_type_view &s, const target_t &t
+  ) {
+    return true;
+  }
+
 }
 namespace tc = moderna::type_check;
 /*
@@ -350,3 +373,12 @@ static_assert(
 );
 static_assert(tc::allow_multiple(tc::variadic_type_view{tc::basic_type_view{"A"}}));
 static_assert(tc::is_allow_multiple<tc::variadic_type_view<tc::basic_type_view>>);
+static_assert(tc::is_connectable(tc::basic_type_view{"A"}, tc::any_type_view{}));
+static_assert(tc::is_connectable(tc::list_type_view{tc::basic_type_view{"A"}}, tc::any_type_view{})
+);
+static_assert(tc::is_connectable(
+  tc::list_type_view{tc::basic_type_view{"A"}}, tc::list_type_view{tc::any_type_view{}}
+));
+static_assert(tc::is_connectable(
+  tc::tuple_type_view{tc::basic_type_view{"A"}}, tc::tuple_type_view{tc::any_type_view{}}
+));

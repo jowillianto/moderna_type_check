@@ -75,7 +75,7 @@ export interface MultiNamelessRecord {
 }
 
 export interface SourceMatch {
-  readonly type: EmbindString;
+  type: GenericType;
   id: number;
   readonly name: EmbindString;
   to_string(): string;
@@ -83,10 +83,10 @@ export interface SourceMatch {
 }
 
 export interface RecordMatch {
+  type: GenericType;
   sources: SourceMatchArray;
   readonly target: EmbindString;
   is_empty(): boolean;
-  type(): string;
   to_string(): string;
   size(): number;
   delete(): void;

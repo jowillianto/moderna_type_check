@@ -16,10 +16,6 @@ auto from_json(const std::string &t) {
 template <typename T> auto to_string(const T &t) {
   return std::format("{}", t);
 }
-template <typename T> auto get_name(const T &t) {
-  return t.type.name();
-}
-
 template <typename T> auto get_data(const T &t) {
   return std::string(t.name.data());
 }
@@ -58,14 +54,14 @@ EMSCRIPTEN_BINDINGS(moderna_type_check) {
     .function("to_string", to_string<tc::multi_nameless_record<tcg>>);
 
   class_<tc::source_match<tcg>>("SourceMatch")
-    .property("type", get_name<tc::source_match<tcg>>)
+    .property("type", &tc::source_match<tcg>::type, return_value_policy::reference())
     .property("id", &tc::source_match<tcg>::id)
     .property("name", get_data<tc::source_match<tcg>>)
     .function("to_string", to_string<tc::source_match<tcg>>);
 
   class_<tc::record_match<tcg>>("RecordMatch")
     .function("is_empty", &tc::record_match<tcg>::is_empty)
-    .function("type", get_name<tc::record_match<tcg>>)
+    .property("type", &tc::record_match<tcg>::type, return_value_policy::reference())
     .property("sources", &tc::record_match<tcg>::sources, return_value_policy::reference())
     .property("target", get_target<tc::record_match<tcg>>)
     .function("to_string", to_string<tc::record_match<tcg>>)

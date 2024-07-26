@@ -127,13 +127,21 @@ namespace moderna::type_check {
         return n;
       }
     };
+    struct any_type {
+      rfl::Literal<"any", "Any"> type;
+      using viewer_t = any_type_view;
+      
+      std::string name() const {
+        return "Any";
+      }
+    };
 
     using variant_t =
-      std::variant<list_type, union_type, optional_type, variadic_type, tuple_type, basic_type>;
+      std::variant<list_type, union_type, optional_type, variadic_type, tuple_type, any_type, basic_type>;
     variant_t type;
 
     using ReflectionType = std::variant<
-      rfl::TaggedUnion<"type", list_type, union_type, optional_type, variadic_type, tuple_type>,
+      rfl::TaggedUnion<"type", list_type, union_type, optional_type, variadic_type, tuple_type, any_type>,
       basic_type,
       std::string>;
 
@@ -200,6 +208,7 @@ namespace moderna::type_check {
   using union_type = generic_type::union_type;
   using tuple_type = generic_type::tuple_type;
   using basic_type = generic_type::basic_type;
+  using any_type = generic_type::any_type;
 
   /*
     VIEWER TRANSFORMATION
@@ -232,6 +241,11 @@ namespace moderna::type_check {
   template <> struct owner_viewer<variadic_type, variadic_type::viewer_t> {
     constexpr static variadic_type::viewer_t as_view(const variadic_type &owner) {
       return variadic_type::viewer_t{.child{*owner.child}};
+    }
+  };
+  template <> struct owner_viewer<any_type, any_type::viewer_t> {
+    constexpr static any_type::viewer_t as_view(const any_type &owner) {
+      return any_type::viewer_t{};
     }
   };
   /*
