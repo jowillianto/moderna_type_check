@@ -7,8 +7,7 @@ from .moderna_type_check import (
     RecordMatches as record_matches,
     GenericType as generic_type,
 )
-
-from typing import Callable, Dict, List, Union
+from typing_extensions import Callable, Dict, List, Union
 
 
 class GenericType(generic_type):

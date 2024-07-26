@@ -33,7 +33,6 @@ if (EXISTS ${CMAKE_CURRENT_LIST_DIR}/libs/pybind11/CMakeLists.txt AND NOT BUILD_
       ${pybind11_LIBRARIES}
       pybind11::module
       reflectcpp
-      moderna_variant_error
   )
   set_target_properties(${PROJECT_NAME}_python PROPERTIES PREFIX "")
   set_target_properties(${PROJECT_NAME}_python PROPERTIES OUTPUT_NAME ${PROJECT_NAME})

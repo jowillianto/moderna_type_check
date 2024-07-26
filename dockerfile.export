@@ -1,0 +1,49 @@
+ARG PYTHON_VERSION
+FROM jowillianto/cpp-module-cont AS compile
+ARG PYTHON_VERSION
+RUN apt clean
+RUN rm -rf /var/lib/apt/lists/*
+RUN add-apt-repository ppa:deadsnakes/ppa
+RUN apt update && DEBIAN_FRONTEND=noninteractive apt install -y \
+  python${PYTHON_VERSION}-dev \
+  python${PYTHON_VERSION}-distutils
+RUN python${PYTHON_VERSION} --version
+# Copy and Cache
+WORKDIR /app
+COPY ./libs /app/libs
+COPY ./src /app/src
+COPY ./wrappers /app/wrappers
+COPY ./CMakeLists.txt /app
+RUN rm -rf /app/build
+
+# Build
+WORKDIR /app
+RUN CXX=clang++-18 cmake \
+  -B build \
+  -GNinja \
+  -DPython3_EXECUTABLE=/usr/bin/python${PYTHON_VERSION} \
+  -DPYBIND11_PYTHON_VERSION=${PYTHON_VERSION} \
+  -DCMAKE_CXX_FLAGS="-stdlib=libc++ -lc++abi" \
+  -DCMAKE_BUILD_TYPE=Release
+WORKDIR /app/build
+
+# Build Python
+RUN ninja moderna_type_check_python
+
+FROM python:${PYTHON_VERSION}-slim AS test
+RUN apt update && apt install libc++-dev -y
+COPY ./setup.py /app/setup.py
+COPY ./moderna /app/moderna
+COPY ./MANIFEST.in /app/MANIFEST.in
+COPY --from=compile /app/build/moderna_type_check.so /app/moderna/type_check/moderna_type_check.so
+WORKDIR /app
+RUN pip install . --extra-index-url=https://pypi.cal-tb01.ddnsfree.com
+WORKDIR /
+RUN python3 -m unittest moderna.type_check.tests
+
+RUN pip install wheel
+WORKDIR /app
+RUN python3 setup.py bdist_wheel
+
+FROM scratch AS export
+COPY --from=test /app/dist /
