@@ -35,6 +35,8 @@ EMSCRIPTEN_BINDINGS(moderna_type_check) {
   class_<tcg>("GenericType")
     .class_function("from_json", from_json<tcg>)
     .function("name", &tcg::name)
+    .function("allow_multiple", tc::allow_multiple<tcg>)
+    .function("allow_empty", tc::allow_empty<tcg>)
     .function("to_string", &tcg::name);
 
   class_<tc::nameless_record<tcg>>("NamelessRecord")

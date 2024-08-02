@@ -12,6 +12,14 @@ using tcg = tc::generic_type;
 PYBIND11_MODULE(moderna_type_check, m) {
   py::class_<tcg>(m, "GenericType")
     .def("name", &tcg::name)
+    .def("allow_multiple", [](const tcg& g) {
+      return tc::allow_multiple(g);
+    })
+    .def("allow_empty", [](const tcg& g){
+      return tc::allow_empty(g);
+    })
+    .def("__str__", &tcg::name)
+    .def("__repr__", &tcg::name)
     .def_static("from_json", [](const std::string& s){
       return tcg::from_json(s).value();
     });

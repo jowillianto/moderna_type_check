@@ -13,6 +13,8 @@ from typing_extensions import Callable, Dict, List, Union
 class GenericType(generic_type):
     name: Callable[[], str]
     from_json: Callable[[str], "GenericType"]
+    allow_multiple : Callable[[], bool]
+    allow_empty: Callable[[], bool]
 
 
 class NamelessRecord(nameless_record):
@@ -38,7 +40,7 @@ class MultiNamelessRecord(multi_nameless_record):
 
 class SourceMatch(source_match):
     type: GenericType
-    id: str
+    id: int
     name: str
     __str__: Callable[[], str]
     __repr__: Callable[[], str]
