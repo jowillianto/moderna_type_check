@@ -86,6 +86,7 @@ namespace moderna::type_check {
       Adds two records together.
     */
     multi_nameless_record<type_t> operator+(const nameless_record<type_t> &record) const;
+    multi_nameless_record<type_t> operator+(const multi_nameless_record<type_t>& record) const;
     /*
       Create multiple records from this one record.
     */
@@ -228,6 +229,17 @@ namespace moderna::type_check {
     const nameless_record<type_t> &record
   ) const {
     return multi_nameless_record<type_t>{.records{*this, record}};
+  }
+  template <checkable_generic type_t>
+  multi_nameless_record<type_t> nameless_record<type_t>::operator+(
+    const multi_nameless_record<type_t> &record
+  ) const {
+    std::vector<nameless_record<type_t> > records;
+    records.reserve(record.records.size() + 1);
+    records.emplace_back(*this);
+    for (const auto& r : record.records)
+      records.emplace_back(r);
+    return multi_nameless_record<type_t>{.records{records}};
   }
   template <checkable_generic type_t>
   multi_nameless_record<type_t> nameless_record<type_t>::to_multiple() const {

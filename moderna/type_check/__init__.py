@@ -26,7 +26,7 @@ class NamelessRecord(nameless_record):
     size: Callable[[], int]
     __len__: Callable[[], int]
     is_empty: Callable[[], bool]
-    __add__: Callable[["NamelessRecord"], "MultiNamelessRecord"]
+    __add__: Callable[[Union["NamelessRecord", "MultiNamelessRecord"]], "MultiNamelessRecord"]
     __str__: Callable[[], str]
     __repr__: Callable[[], str]
 

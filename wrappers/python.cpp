@@ -40,6 +40,13 @@ PYBIND11_MODULE(moderna_type_check, m) {
       [](const tc::nameless_record<tcg> &x, const tc::nameless_record<tcg> &y) { return x + y; },
       py::is_operator()
     )
+    .def(
+      "__add__",
+      [](const tc::nameless_record<tcg>&x, const tc::multi_nameless_record<tcg>& y){
+        return x + y;
+      },
+      py::is_operator()
+    )
     .def("__str__", [](const tc::nameless_record<tcg> &t) { return std::format("{}", t); })
     .def("__repr__", [](const tc::nameless_record<tcg> &t) { return std::format("{}", t); });
   py::class_<tc::multi_nameless_record<tcg>>(m, "MultiNamelessRecord")
