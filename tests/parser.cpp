@@ -3,7 +3,6 @@ import moderna.type_check;
 #include <rfl/Box.hpp>
 #include <array>
 #include <format>
-#include <memory>
 #include <print>
 
 namespace tc = moderna::type_check;
