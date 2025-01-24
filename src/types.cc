@@ -18,6 +18,10 @@ namespace moderna::type_check {
       std::string type;
       using viewer_t = basic_type_view;
 
+      friend bool operator==(const basic_type &a, const basic_type &b) {
+        return a.type == b.type;
+      }
+
       std::string name() const {
         return std::format("\"{}\"", type);
       }
@@ -26,6 +30,10 @@ namespace moderna::type_check {
       rfl::Literal<"list", "List"> type;
       rfl::Box<generic_type> child;
       using viewer_t = list_type_view<const generic_type &>;
+
+      friend bool operator==(const list_type &a, const list_type &b) {
+        return *a.child == *b.child;
+      }
 
       list_type clone() const {
         return list_type{.type{"list"}, .child{rfl::make_box<generic_type>(deep_copy(*child))}};
@@ -52,6 +60,15 @@ namespace moderna::type_check {
         return t;
       }
 
+      friend bool operator==(const union_type &a, const union_type &b) {
+        for (const auto &[a, b] : std::ranges::views::zip(a.child, b.child)) {
+          if (a != b) {
+            return false;
+          }
+        }
+        return true;
+      }
+
       std::string name() const {
         std::string n;
         auto ctx = std::back_inserter(n);
@@ -71,6 +88,10 @@ namespace moderna::type_check {
         return optional_type{
           .type{"optional"}, .child{rfl::make_box<generic_type>(deep_copy(*child))}
         };
+      }
+
+      friend bool operator==(const optional_type &a, const optional_type &b) {
+        return *a.child == *b.child;
       }
 
       std::string name() const {
@@ -95,6 +116,10 @@ namespace moderna::type_check {
         };
       }
 
+      friend bool operator==(const variadic_type &a, const variadic_type &b) {
+        return *a.child == *b.child;
+      }
+
       std::string name() const {
         return std::format("Variadic[{}]", child->name());
       }
@@ -117,6 +142,15 @@ namespace moderna::type_check {
         return t;
       }
 
+      friend bool operator==(const tuple_type &a, const tuple_type &b) {
+        for (const auto &[a, b] : std::ranges::views::zip(a.child, b.child)) {
+          if (a != b) {
+            return false;
+          }
+        }
+        return true;
+      }
+
       std::string name() const {
         std::string n;
         auto ctx = std::back_inserter(n);
@@ -130,18 +164,35 @@ namespace moderna::type_check {
     struct any_type {
       rfl::Literal<"any", "Any"> type;
       using viewer_t = any_type_view;
-      
+
+      friend bool operator==(const any_type &a, const any_type &b) {
+        return true;
+      }
+
       std::string name() const {
         return "Any";
       }
     };
 
-    using variant_t =
-      std::variant<list_type, union_type, optional_type, variadic_type, tuple_type, any_type, basic_type>;
+    using variant_t = std::variant<
+      list_type,
+      union_type,
+      optional_type,
+      variadic_type,
+      tuple_type,
+      any_type,
+      basic_type>;
     variant_t type;
 
     using ReflectionType = std::variant<
-      rfl::TaggedUnion<"type", list_type, union_type, optional_type, variadic_type, tuple_type, any_type>,
+      rfl::TaggedUnion<
+        "type",
+        list_type,
+        union_type,
+        optional_type,
+        variadic_type,
+        tuple_type,
+        any_type>,
       basic_type,
       std::string>;
 
@@ -158,9 +209,7 @@ namespace moderna::type_check {
           else if constexpr (std::same_as<obj_t, basic_type>)
             return variant_t{deep_copy(t)};
           else
-            return rfl::visit([](const auto& t){
-              return variant_t{deep_copy(t)};
-            }, t.variant());
+            return rfl::visit([](const auto &t) { return variant_t{deep_copy(t)}; }, t.variant());
         },
         var
       )} {}
@@ -175,6 +224,25 @@ namespace moderna::type_check {
     generic_type &operator=(generic_type &&other) {
       type = std::move(other.type);
       return *this;
+    }
+    friend bool operator==(const generic_type &a, const generic_type &b) {
+      return std::visit(
+        [&](const auto &a_type) {
+          return std::visit(
+            [&](const auto &b_type) {
+              using type_a_t = std::decay_t<decltype(a_type)>;
+              using type_b_t = std::decay_t<decltype(b_type)>;
+              if constexpr (!std::same_as<type_a_t, type_b_t>) {
+                return false;
+              } else {
+                return a_type == b_type;
+              }
+            },
+            b.type
+          );
+        },
+        a.type
+      );
     }
     ReflectionType reflection() const {
       return std::visit(

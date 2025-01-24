@@ -5,7 +5,7 @@ set (CMAKE_CXX_STANDARD_REQUIRED true)
 set (CMAKE_CXX_SCAN_FOR_MODULES true)
 
 if (NOT TARGET ${PROJECT_NAME})
-  file(GLOB ${PROJECT_NAME}_src ${CMAKE_CURRENT_LIST_DIR}/src/*.ccm)
+  file(GLOB ${PROJECT_NAME}_src ${CMAKE_CURRENT_LIST_DIR}/src/*.cc)
   add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/libs/reflect-cpp)
   add_library(${PROJECT_NAME})
   target_sources(${PROJECT_NAME}
@@ -55,6 +55,12 @@ if (
     COMPILE_DEFINITIONS 
       TYPE_A_FILE="${CMAKE_CURRENT_LIST_DIR}/assets/type_a.json" 
       TYPE_B_FILE="${CMAKE_CURRENT_LIST_DIR}/assets/type_b.json"
+    SANITIZERS all
+  )
+  moderna_add_test(
+    ${PROJECT_NAME}_parser_tests
+    ${CMAKE_CURRENT_LIST_DIR}/tests/parser.cpp
+    LIBRARIES ${PROJECT_NAME} moderna_test_lib moderna_io
     SANITIZERS all
   )
 else()
