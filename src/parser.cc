@@ -1,9 +1,11 @@
 module;
 #include <rfl/Box.hpp>
+#include <rfl/json.hpp>
 #include <algorithm>
 #include <expected>
 #include <format>
 #include <ranges>
+#include <rfl.hpp>
 #include <string>
 #include <variant>
 export module moderna.type_check:parser;
@@ -33,6 +35,8 @@ namespace moderna::type_check {
     }
     parse_error_trace(parse_error_trace &&) = default;
 
+    std::string what() const noexcept;
+
     static parse_error_trace make_trace(std::string_view parse_ctx, parse_error prev) {
       return parse_error_trace{
         std::string{parse_ctx},
@@ -50,7 +54,9 @@ namespace moderna::type_check {
   private:
     parse_error_trace(
       std::string parse_ctx, std::unique_ptr<std::variant<parse_error, parse_error_trace>> prev
-    ) : parse_ctx{parse_ctx}, prev{std::move(prev)} {}
+    ) :
+      parse_ctx{parse_ctx},
+      prev{std::move(prev)} {}
   };
 
   /*
@@ -62,7 +68,7 @@ namespace moderna::type_check {
   std::expected<std::pair<std::string_view, const char *>, parse_error_trace> get_type_name(
     std::string_view v
   ) {
-    auto type_name_start = std::ranges::find_if(v, [](auto c) { return !std::isspace(c); });
+    auto type_name_start = std::ranges::find_if(v, [](auto c) { return std::isalpha(c); });
     auto type_name_end = std::ranges::find_if(type_name_start + 1, v.end(), [](auto c) {
       return !std::isalpha(c) && c != '_';
     });
@@ -119,9 +125,7 @@ namespace moderna::type_check {
     return get_type_name(v).and_then([&](auto &&p) -> return_t {
       auto [type_name, end] = p;
       auto type_params = std::string_view{end, v.end()};
-      if (type_name == "Any") {
-        return std::pair{generic_type{generic_type::any_type{std::string{"Any"}}}, end};
-      } else if (type_name == "List" || type_name == "Optional" || type_name == "Variadic") {
+      if (type_name == "List" || type_name == "Optional" || type_name == "Variadic") {
         return get_bracket_content(type_params).and_then([&](auto &&p) {
           auto [bracket_content, end] = p;
           return __from_string(bracket_content)
@@ -131,18 +135,14 @@ namespace moderna::type_check {
             })
             .transform([&](auto &&g) {
               if (type_name == "List") {
-                return std::pair{
-                  generic_type{generic_type::list_type{std::string{"List"}, std::move(g)}}, end
-                };
+                return std::pair{generic_type{list_type{std::string{"List"}, std::move(g)}}, end};
               } else if (type_name == "Optional") {
                 return std::pair{
-                  generic_type{generic_type::optional_type{std::string{"Optional"}, std::move(g)}},
-                  end
+                  generic_type{optional_type{std::string{"Optional"}, std::move(g)}}, end
                 };
               } else {
                 return std::pair{
-                  generic_type{generic_type::variadic_type{std::string{"Variadic"}, std::move(g)}},
-                  end
+                  generic_type{variadic_type{std::string{"Variadic"}, std::move(g)}}, end
                 };
               }
             });
@@ -171,16 +171,16 @@ namespace moderna::type_check {
           }
           if (type_name == "Union") {
             return std::pair{
-              generic_type{generic_type::union_type{std::string{"Union"}, std::move(subtypes)}}, end
+              generic_type{union_type{std::string{"Union"}, std::move(subtypes)}}, end
             };
           } else {
             return std::pair{
-              generic_type{generic_type::tuple_type{std::string{"Tuple"}, std::move(subtypes)}}, end
+              generic_type{tuple_type{std::string{"Tuple"}, std::move(subtypes)}}, end
             };
           }
         });
       } else {
-        return std::pair{generic_type{generic_type::basic_type{std::string{type_name}}}, end};
+        return std::pair{generic_type{basic_type{std::string{type_name}}}, end};
       }
     });
   }
@@ -192,12 +192,22 @@ namespace moderna::type_check {
     /*
       Now we try to find the type name. This means, parsing up until we see a space or a bracket.
     */
-    return __from_string(v).transform([](auto &&p) {
-      auto [g, end] = std::move(p);
-      return std::move(g);
-    });
+    using expected_t = std::expected<generic_type, parse_error_trace>;
+    if (v.contains('{') || v.contains('}') || v.contains('\"')) {
+      auto r = rfl::json::read<generic_type>(std::string{v.begin(), v.end()});
+      std::optional<rfl::Error> err = r.error();
+      if (!r) {
+        return std::unexpected{parse_error_trace::make_trace(v, parse_error{err->what()})};
+      } else {
+        return std::move(r.value());
+      }
+    } else {
+      return __from_string(v).transform([](auto &&p) {
+        auto [g, end] = std::move(p);
+        return std::move(g);
+      });
+    }
   }
-
 }
 
 namespace tc = moderna::type_check;
@@ -227,3 +237,7 @@ template <> struct std::formatter<tc::parse_error_trace> {
     return ctx.out();
   }
 };
+
+std::string tc::parse_error_trace::what() const noexcept {
+  return std::format("{}", *this);
+}

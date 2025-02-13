@@ -4,6 +4,10 @@ set (CMAKE_CXX_STANDARD 23)
 set (CMAKE_CXX_STANDARD_REQUIRED true)
 set (CMAKE_CXX_SCAN_FOR_MODULES true)
 
+option (MODERNA_TYPE_CHECK_BUILD_TESTS "Build tests for Moderna Type Check" OFF)
+option (MODERNA_TYPE_CHECK_BUILD_PYTHON_WRAPPER "Build Python Wrapper for Moderna Type Check" OFF)
+option (MODERNA_TYPE_CHECK_BUILD_WASM "Build WebAssembly Wrapper for Moderna Type Check" OFF)
+
 if (NOT TARGET ${PROJECT_NAME})
   file(GLOB ${PROJECT_NAME}_src ${CMAKE_CURRENT_LIST_DIR}/src/*.cc)
   add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/libs/reflect-cpp)
@@ -15,10 +19,10 @@ if (NOT TARGET ${PROJECT_NAME})
   target_link_libraries(${PROJECT_NAME} PUBLIC reflectcpp)
 endif()
 # Python Build
-if (EXISTS ${CMAKE_CURRENT_LIST_DIR}/libs/pybind11/CMakeLists.txt AND NOT BUILD_EMSCRIPTEN)
+if (MODERNA_TYPE_CHECK_BUILD_PYTHON_WRAPPER)
   find_package(Python3 3.7 REQUIRED COMPONENTS Interpreter Development)
-  add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/libs/pybind11 EXCLUDE_FROM_ALL)
-  add_library(${PROJECT_NAME}_python SHARED EXCLUDE_FROM_ALL)
+  add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/libs/pybind11)
+  add_library(${PROJECT_NAME}_python SHARED)
   target_sources(${PROJECT_NAME}_python
     PUBLIC
       ${CMAKE_CURRENT_LIST_DIR}/wrappers/python.cpp
@@ -37,37 +41,34 @@ if (EXISTS ${CMAKE_CURRENT_LIST_DIR}/libs/pybind11/CMakeLists.txt AND NOT BUILD_
   set_target_properties(${PROJECT_NAME}_python PROPERTIES PREFIX "")
   set_target_properties(${PROJECT_NAME}_python PROPERTIES OUTPUT_NAME ${PROJECT_NAME})
   set_target_properties(${PROJECT_NAME}_python PROPERTIES SUFFIX ".so")
-  target_compile_options(${PROJECT_NAME}_python PRIVATE "-fPIC")
 endif()
 
-if (
-  EXISTS ${CMAKE_CURRENT_LIST_DIR}/../test-lib
-  AND PROJECT_IS_TOP_LEVEL
-  AND NOT BUILD_EMSCRIPTEN
-)
+if (MODERNA_TYPE_CHECK_BUILD_TESTS)
   include(CTest)
   add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/../test-lib test-lib)
-  add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/../io io)
   moderna_add_test(
-    ${PROJECT_NAME}_tests
-    ${CMAKE_CURRENT_LIST_DIR}/tests/tests.cpp
-    LIBRARIES ${PROJECT_NAME} moderna_test_lib moderna_io
-    COMPILE_DEFINITIONS 
-      TYPE_A_FILE="${CMAKE_CURRENT_LIST_DIR}/assets/type_a.json" 
-      TYPE_B_FILE="${CMAKE_CURRENT_LIST_DIR}/assets/type_b.json"
+    ${PROJECT_NAME}_type_check_test
+    ${CMAKE_CURRENT_LIST_DIR}/tests/type_check.cc
+    LIBRARIES ${PROJECT_NAME} moderna_test_lib
+    SANITIZERS all
+  )
+  moderna_add_test(
+    ${PROJECT_NAME}_engine_test
+    ${CMAKE_CURRENT_LIST_DIR}/tests/engine.cc
+    LIBRARIES ${PROJECT_NAME} moderna_test_lib
     SANITIZERS all
   )
   moderna_add_test(
     ${PROJECT_NAME}_parser_tests
-    ${CMAKE_CURRENT_LIST_DIR}/tests/parser.cpp
-    LIBRARIES ${PROJECT_NAME} moderna_test_lib moderna_io
+    ${CMAKE_CURRENT_LIST_DIR}/tests/parser.cc
+    LIBRARIES ${PROJECT_NAME} moderna_test_lib
     SANITIZERS all
   )
 else()
   message (${PROJECT_NAME} : "Clone Moderna Library to Test")
 endif()
 
-if(BUILD_EMSCRIPTEN)
+if(MODERNA_TYPE_CHECK_BUILD_WASM)
   add_executable(${PROJECT_NAME}_js)
   target_sources(${PROJECT_NAME}_js PUBLIC
     ${CMAKE_CURRENT_LIST_DIR}/wrappers/wasm.cpp
