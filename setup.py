@@ -9,7 +9,7 @@ class BinaryDistribution(Distribution):
 
 setup(
     name="moderna-type-check",
-    version="0.0.2",
+    version="1.0.0",
     description="A Custom Type Checker for pipeline like application",
     url="https://github.com/jowillianto/moderna_type_check",
     author="Jonathan Willianto",

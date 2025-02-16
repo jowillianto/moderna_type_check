@@ -38,8 +38,15 @@ if __name__ == "__main__":
         help="Use False to see more clearly",
         required=False,
     )
+    parser.add_argument(
+        "--version", type=int, help="Python version to build", required=False
+    )
     parallel = parser.parse_args().parallel
-    if parallel:
+    version = parser.parse_args().version
+    if version is not None:
+        subprocess.run(get_args("linux/amd64", str(version)))
+        subprocess.run(get_args("linux/arm64", str(version)))
+    elif parallel:
         with ThreadPoolExecutor() as t:
             t.map(subprocess.run, subprocess_args)
     else:

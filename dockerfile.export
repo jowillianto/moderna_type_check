@@ -1,12 +1,13 @@
 ARG PYTHON_VERSION
-FROM jowillianto/cpp-module-cont AS compile
+FROM jowillianto/cpp-module-toolchain:cmake3.31-ninja1.11-llvm17 AS compile
 ARG PYTHON_VERSION
-RUN apt clean
-RUN rm -rf /var/lib/apt/lists/*
 RUN add-apt-repository ppa:deadsnakes/ppa
 RUN apt update && DEBIAN_FRONTEND=noninteractive apt install -y \
-  python${PYTHON_VERSION}-dev \
-  python${PYTHON_VERSION}-distutils
+  python${PYTHON_VERSION}-dev
+RUN bash -c "if \$(apt list | grep -q python${PYTHON_VERSION}-distutils); \
+  then apt install -y python${PYTHON_VERSION}-distutils; \
+  else apt install -y python3-pip; pip install setuptools; \
+fi"
 RUN python${PYTHON_VERSION} --version
 # Copy and Cache
 WORKDIR /app
@@ -18,9 +19,10 @@ RUN rm -rf /app/build
 
 # Build
 WORKDIR /app
-RUN CXX=clang++-18 cmake \
-  -B build \
+RUN C=clang CXX=clang++ cmake \
+  -Bbuild \
   -GNinja \
+  -DMODERNA_TYPE_CHECK_BUILD_PYTHON_WRAPPER=ON \
   -DPython3_EXECUTABLE=/usr/bin/python${PYTHON_VERSION} \
   -DPYBIND11_PYTHON_VERSION=${PYTHON_VERSION} \
   -DCMAKE_CXX_FLAGS="-stdlib=libc++ -lc++abi" \
@@ -41,7 +43,7 @@ RUN pip install . --extra-index-url=https://pypi.cal-tb01.ddnsfree.com
 WORKDIR /
 RUN python3 -m unittest moderna.type_check.tests
 
-RUN pip install wheel
+RUN pip install wheel setuptools
 WORKDIR /app
 RUN python3 setup.py bdist_wheel
 
