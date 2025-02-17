@@ -105,47 +105,92 @@ class EngineTests(TestCase):
         matches = RecordMatches.create(source_rec, target_rec)
         self.assertTrue(matches.is_complete())
         self.assertEqual(matches.size(), 3)
-    
+
     def test_engine_from_json2(self):
         source_x = {
-            "a" : "c",
-            "b" : {
-                "type" : "List",
-                "child" : {
-                    "type": "Tuple",
-                    "child" : ["a", "b", "c", "d"]
-                }
+            "a": "c",
+            "b": {
+                "type": "List",
+                "child": {"type": "Tuple", "child": ["a", "b", "c", "d"]},
             },
-            "c" : {
-                "type" : "Optional",
-                "child" : "a_b"
-            }
+            "c": {"type": "Optional", "child": "a_b"},
         }
         target_x = {
-            "a" : {
-                "type" : "Optional",
-                "child" : "c"
-            },
-            "b" : {
-                "type" : "Optional",
-                "child" : {
+            "a": {"type": "Optional", "child": "c"},
+            "b": {
+                "type": "Optional",
+                "child": {
                     "type": "List",
-                    "child" : {
-                        "type": "Tuple",
-                        "child" : ["a", "b", "c", "d"]
-                    }
-                }
+                    "child": {"type": "Tuple", "child": ["a", "b", "c", "d"]},
+                },
             },
-            "c" : {
-                "type" : "Optional",
-                "child" : {
-                    "type" : "Optional",
-                    "child" : "a_b"
-                }
-            }
+            "c": {"type": "Optional", "child": {"type": "Optional", "child": "a_b"}},
         }
         source_rec = NamelessRecord.from_json(json.dumps(source_x))
         target_rec = NamelessRecord.from_json(json.dumps(target_x))
         matches = RecordMatches.create(source_rec, target_rec)
         self.assertTrue(matches.is_complete())
         self.assertEqual(matches.size(), 3)
+
+    def test_iteration(self):
+        source_x = {
+            "a": "c",
+            "b": {
+                "type": "List",
+                "child": {"type": "Tuple", "child": ["a", "b", "c", "d"]},
+            },
+            "c": {"type": "Optional", "child": "a_b"},
+        }
+        target_x = {
+            "a": {"type": "Optional", "child": "c"},
+            "b": {
+                "type": "Optional",
+                "child": {
+                    "type": "List",
+                    "child": {"type": "Tuple", "child": ["a", "b", "c", "d"]},
+                },
+            },
+            "c": {"type": "Optional", "child": {"type": "Optional", "child": "a_b"}},
+        }
+        source_rec = NamelessRecord.from_json(json.dumps(source_x))
+        target_rec = NamelessRecord.from_json(json.dumps(target_x))
+        matches = RecordMatches.create(source_rec, target_rec)
+        for id, e in enumerate(matches):
+            if id == 0:
+                self.assertEqual(e.target, "a")
+                self.assertEqual(
+                    e.type, GenericType(OptionalType(GenericType(BasicType("c"))))
+                )
+            elif id == 1:
+                self.assertEqual(e.target, "b")
+                self.assertEqual(
+                    e.type,
+                    GenericType(
+                        OptionalType(
+                            GenericType(
+                                ListType(
+                                    GenericType(
+                                        TupleType(
+                                            [
+                                                GenericType(BasicType("a")),
+                                                GenericType(BasicType("b")),
+                                                GenericType(BasicType("c")),
+                                                GenericType(BasicType("d")),
+                                            ]
+                                        )
+                                    )
+                                )
+                            )
+                        )
+                    ),
+                )
+            elif id == 2:
+                self.assertEqual(e.target, "c")
+                self.assertEqual(
+                    e.type,
+                    GenericType(
+                        OptionalType(
+                            GenericType(OptionalType(GenericType(BasicType("a_b"))))
+                        )
+                    ),
+                )

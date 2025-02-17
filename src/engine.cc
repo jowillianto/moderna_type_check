@@ -268,10 +268,14 @@ namespace moderna::type_check {
       return get(id).and_then([&](const nameless_record &record) { return record.get(name); });
     }
     multi_nameless_record operator+(const nameless_record &record) const {
-      return multi_nameless_record{*this} + record;
+      multi_nameless_record new_records{*this};
+      new_records.add_record(record);
+      return new_records;
     }
     multi_nameless_record operator+(nameless_record &&record) const {
-      return multi_nameless_record{*this} + std::move(record);
+      multi_nameless_record new_records{*this};
+      new_records.add_record(std::move(record));
+      return new_records;
     }
   };
 }

@@ -1,1 +1,2 @@
 include moderna/type_check/moderna_type_check.so
+include moderna/type_check/__init__.pyi

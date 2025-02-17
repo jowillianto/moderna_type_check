@@ -175,6 +175,11 @@ PYBIND11_MODULE(moderna_type_check, m) {
     .def("__repr__", &to_string<tc::nameless_record>)
     .def("size", &tc::nameless_record::size)
     .def("__len__", &tc::nameless_record::size)
+    .def(
+      "__iter__",
+      [](const tc::nameless_record &r) { return py::make_iterator(r.begin(), r.end()); },
+      py::keep_alive<0, 1>()
+    )
     .def_static("from_json", &tc::nameless_record::from_json);
 
   py::class_<tc::multi_nameless_record>(m, "MultiNamelessRecord")
@@ -188,6 +193,11 @@ PYBIND11_MODULE(moderna_type_check, m) {
                                                                              &) const>(
         &tc::multi_nameless_record::operator+
       )
+    )
+    .def(
+      "__iter__",
+      [](const tc::multi_nameless_record &r) { return py::make_iterator(r.begin(), r.end()); },
+      py::keep_alive<0, 1>()
     )
     .def("__str__", &to_string<tc::multi_nameless_record>)
     .def("__repr__", &to_string<tc::multi_nameless_record>);
@@ -211,6 +221,11 @@ PYBIND11_MODULE(moderna_type_check, m) {
     .def("is_partial", &tc::record_matches::is_partial)
     .def("__str__", &to_string<tc::record_matches>)
     .def("__repr__", &to_string<tc::record_matches>)
+    .def(
+      "__iter__",
+      [](const tc::record_matches &r) { return py::make_iterator(r.begin(), r.end()); },
+      py::keep_alive<0, 1>()
+    )
     .def("size", &tc::record_matches::size);
   py::class_<tc::record_match>(m, "RecordMatch")
     .def_readonly("type", &tc::record_match::type, py::return_value_policy::reference)
@@ -221,12 +236,22 @@ PYBIND11_MODULE(moderna_type_check, m) {
     .def("is_connectable", &tc::record_match::is_connectable)
     .def("first", &tc::record_match::first)
     .def("__str__", &to_string<tc::record_match>)
+    .def(
+      "__iter__",
+      [](const tc::record_match &r) { return py::make_iterator(r.begin(), r.end()); },
+      py::keep_alive<0, 1>()
+    )
     .def("__repr__", &to_string<tc::record_match>);
   py::class_<tc::source_match>(m, "SourceMatch")
     .def_readonly("source", &tc::source_match::source, py::return_value_policy::reference)
     .def_readonly("name", &tc::source_match::name)
     .def_readonly("id", &tc::source_match::id)
     .def("__str__", &to_string<tc::source_match>)
+    .def(
+      "__iter__",
+      [](const tc::record_matches &r) { return py::make_iterator(r.begin(), r.end()); },
+      py::keep_alive<0, 1>()
+    )
     .def("__repr__", &to_string<tc::source_match>);
   m.def("is_connectable", &tc::is_connectable<tc::generic_type, tc::generic_type>);
   m.def("from_string", py::overload_cast<std::string_view>(&tc::from_string));
