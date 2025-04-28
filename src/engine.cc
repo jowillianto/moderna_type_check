@@ -1,5 +1,6 @@
 module;
 #include <rfl/json.hpp>
+#include <cstddef>
 #include <expected>
 #include <format>
 #include <map>
@@ -203,9 +204,7 @@ namespace moderna::type_check {
       if (!y) {
         auto x = rfl::json::read<nameless_record>(v);
         if (!x) {
-          return std::unexpected{
-            parse_error_trace::make_trace(v, parse_error{x.error().value().what()})
-          };
+          return std::unexpected{parse_error_trace::make_trace(v, parse_error{x.error().what()})};
         }
         return x.value();
       }
