@@ -8,9 +8,12 @@ option (MODERNA_TYPE_CHECK_BUILD_TESTS "Build tests for Moderna Type Check" OFF)
 option (MODERNA_TYPE_CHECK_BUILD_PYTHON_WRAPPER "Build Python Wrapper for Moderna Type Check" OFF)
 option (MODERNA_TYPE_CHECK_BUILD_WASM "Build WebAssembly Wrapper for Moderna Type Check" OFF)
 
+if (NOT TARGET reflectcpp)
+  add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/libs/reflect-cpp)
+endif()
+
 if (NOT TARGET ${PROJECT_NAME})
   file(GLOB ${PROJECT_NAME}_src ${CMAKE_CURRENT_LIST_DIR}/src/*.cc)
-  add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/libs/reflect-cpp)
   add_library(${PROJECT_NAME})
   target_sources(${PROJECT_NAME}
     PUBLIC
