@@ -1,5 +1,4 @@
 module;
-#include <rfl/Box.hpp>
 #include <rfl/json.hpp>
 #include <algorithm>
 #include <expected>
@@ -15,7 +14,7 @@ namespace moderna::type_check {
   struct parse_error {
     std::string msg;
   };
-  struct parse_error_trace {
+  export struct parse_error_trace {
     std::string parse_ctx;
     std::unique_ptr<std::variant<parse_error, parse_error_trace>> prev;
 
@@ -186,7 +185,16 @@ namespace moderna::type_check {
   }
 
   /*
-    This will only parse the first type definition found and disregard the rest.
+    Function that parses only the type from the string
+  */
+  export std::expected<generic_type, parse_error_trace> parse_string(std::string_view v) {
+    using expected_type = std::expected<generic_type, parse_error_trace>;
+    return __from_string(v).transform([](auto &&p) { return p.first; });
+  }
+
+  /*
+    This will only parse the first type definition found and disregard the rest. This will include
+    the JSON fallback.
   */
   export std::expected<generic_type, parse_error_trace> from_string(std::string_view v) {
     /*
