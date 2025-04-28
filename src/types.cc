@@ -1,12 +1,14 @@
 module;
 #include <rfl/Box.hpp>
 #include <rfl/Literal.hpp>
+#include <rfl/internal/has_reflector.hpp>
 #include <algorithm>
+#include <cstddef>
 #include <expected>
 #include <format>
 #include <ranges>
-#include <rfl.hpp>
 #include <string>
+#include <variant>
 export module moderna.type_check:types;
 import :matcher;
 
@@ -65,7 +67,7 @@ namespace moderna::type_check {
       }
 
       friend bool operator==(const union_type &a, const union_type &b) {
-        for (const auto &[a_type, b_type] : std::ranges::views::zip(a.child, b.child)) {
+        for (const auto &[a_type, b_type] : std::ranges::zip_view(a.child, b.child)) {
           if (a_type != b_type) return false;
         }
         return true;
@@ -491,7 +493,7 @@ struct std::formatter<type_t> {
     size_t i = 0;
     for (const auto &child : t.child) {
       format(child, ctx);
-      if (i != t.child.size() - 1) [[unlikely]] {
+      if (i != t.child.size() - 1) {
         std::format_to(ctx.out(), ", ");
       }
       i += 1;
@@ -506,7 +508,7 @@ struct std::formatter<type_t> {
     std::format_to(ctx.out(), "Tuple[");
     for (const auto &child : t.child) {
       format(child, ctx);
-      if (i != t.child.size() - 1) [[unlikely]] {
+      if (i != t.child.size() - 1) {
         std::format_to(ctx.out(), ", ");
       }
       i += 1;
