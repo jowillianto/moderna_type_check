@@ -465,10 +465,10 @@ template <> struct rfl::Reflector<tc::generic_type> {
 };
 
 // Formatter Override
-template <typename type_t>
+template <typename type_t, class char_type>
   requires(std::same_as<type_t, tc::basic_type> || std::same_as<type_t, tc::list_type> || std::same_as<type_t, tc::union_type> || std::same_as<type_t, tc::tuple_type> || std::same_as<type_t, tc::optional_type> || std::same_as<type_t, tc::variadic_type> || std::same_as<type_t, tc::none_type> || std::same_as<type_t, tc::generic_type>)
-struct std::formatter<type_t> {
-  constexpr auto parse(std::format_parse_context &ctx) {
+struct std::formatter<type_t, char_type> {
+  constexpr auto parse(auto &ctx) {
     return ctx.begin();
   }
   template <typename format_context_t>
