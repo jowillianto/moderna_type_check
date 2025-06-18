@@ -13,6 +13,7 @@ if (NOT TARGET reflectcpp)
     set (REFLECTCPP_INSTALL ON)
   endif()
   add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/libs/reflect-cpp)
+  add_library(reflectcpp::reflectcpp ALIAS reflectcpp)
 endif()
 
 
