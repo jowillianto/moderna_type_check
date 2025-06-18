@@ -9,18 +9,25 @@ option (MODERNA_TYPE_CHECK_BUILD_PYTHON_WRAPPER "Build Python Wrapper for Modern
 option (MODERNA_TYPE_CHECK_BUILD_WASM "Build WebAssembly Wrapper for Moderna Type Check" OFF)
 
 if (NOT TARGET reflectcpp)
+  if (MODERNA_INSTALL)
+    set (REFLECTCPP_INSTALL ON)
+  endif()
   add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/libs/reflect-cpp)
 endif()
 
-if (NOT TARGET ${PROJECT_NAME})
-  file(GLOB ${PROJECT_NAME}_src ${CMAKE_CURRENT_LIST_DIR}/src/*.cc)
-  add_library(${PROJECT_NAME})
-  target_sources(${PROJECT_NAME}
-    PUBLIC
-      FILE_SET CXX_MODULES FILES ${${PROJECT_NAME}_src}
-  )
-  target_link_libraries(${PROJECT_NAME} PUBLIC reflectcpp)
-endif()
+
+file(GLOB ${PROJECT_NAME}_src ${CMAKE_CURRENT_LIST_DIR}/src/*.cc)
+add_library(${PROJECT_NAME})
+add_library(moderna::type_check ALIAS ${PROJECT_NAME})
+target_sources(${PROJECT_NAME}
+  PUBLIC
+    FILE_SET CXX_MODULES FILES ${${PROJECT_NAME}_src}
+)
+target_link_libraries(${PROJECT_NAME} 
+  PRIVATE 
+    reflectcpp::reflectcpp
+)
+
 # Python Build
 if (MODERNA_TYPE_CHECK_BUILD_PYTHON_WRAPPER)
   find_package(Python3 3.7 REQUIRED COMPONENTS Interpreter Development)
@@ -85,4 +92,33 @@ if(MODERNA_TYPE_CHECK_BUILD_WASM)
       reflectcpp
       ${PROJECT_NAME}
   )
+endif()
+
+if (MODERNA_INSTALL)
+  include(GNUInstallDirs)
+  set (MODERNA_COMPONENT_NAME "type_check")
+  set_property(
+    TARGET ${PROJECT_NAME} 
+    PROPERTY EXPORT_NAME ${MODERNA_COMPONENT_NAME}
+  )
+  install (
+    TARGETS ${PROJECT_NAME}
+    EXPORT moderna
+    FILE_SET 
+      CXX_MODULES 
+      DESTINATION ${CMAKE_INSTALL_PREFIX}/cxx_modules/moderna/${MODERNA_COMPONENT_NAME}
+      COMPONENT ${MODERNA_COMPONENT_NAME}_file_set
+    CXX_MODULES_BMI 
+      COMPONENT ${MODERNA_COMPONENT_NAME}
+      DESTINATION ${CMAKE_INSTALL_PREFIX}/cxx_modules/moderna/${MODERNA_COMPONENT_NAME}
+  )
+  if (PROJECT_IS_TOP_LEVEL)
+    install (
+      EXPORT moderna
+      DESTINATION ${CMAKE_INSTALL_LIBDIR}/moderna
+      FILE moderna-config.cmake
+      NAMESPACE moderna::
+      CXX_MODULES_DIRECTORY cxx_modules/moderna
+    )
+  endif()
 endif()

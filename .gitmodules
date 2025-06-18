@@ -1,6 +1,6 @@
 [submodule "libs/reflect-cpp"]
 	path = libs/reflect-cpp
-	url = https://github.com/getml/reflect-cpp
+	url = https://github.com/jowillianto/reflect-cpp
 [submodule "libs/emsdk"]
 	path = libs/emsdk
 	url = https://github.com/emscripten-core/emsdk
